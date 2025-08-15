@@ -31,7 +31,7 @@ This functionality is essential for all users of the platform — voters who nee
 ### **5. Associated User Stories**
 
 1.1 **[User Story: Voter Login via Token or ID]**
-  - Voters should be able to log in using a unique identifier (voter ID or token).
+  - Voters should be able to log in using a unique identifier (Student ID).
   - Validate the token against the database.
   - If valid, issue a secure JWT and allow access.
 
@@ -41,7 +41,7 @@ This functionality is essential for all users of the platform — voters who nee
   - Redirect to the admin dashboard on success.
 
 1.3 **[User Story: Role-Based Access Control]**
-  - Differentiate access based on roles: voter vs admin.
+  - Differentiate access based on roles: voter vs. admin.
   - Prevent role spoofing via middleware or decorators.
 
 1.4 **[User Story: JWT-Based Secure Session]**
@@ -73,7 +73,7 @@ This functionality is essential for all users of the platform — voters who nee
 ### **8. Metrics / Success Measurement**
 
 - **Security:** 100% of protected routes require a valid JWT token.
-- **Access Integrity:** 0 unauthorized access attempts allowed past middleware.
+- **Access Integrity:** No unauthorized access attempts allowed past middleware.
 - **Login Performance:** Authentication completes within 1 second for 95% of users.
 - **Session Validity:** Token expiry and refresh system works without session leaks.
 
@@ -89,5 +89,5 @@ This functionality is essential for all users of the platform — voters who nee
 
 #### Changelog:
 
-- **2025-07-30:** Example: Initial version created based on merged PRD feature list.
+- **2025-07-30:** Example: Initial version created based on a merged PRD feature list.
 

@@ -6,7 +6,7 @@
 
 This epic focuses on securing and organizing all sensitive and operational data within the e-voting platform. It ensures that data is accurate, securely stored, auditable, and efficiently synchronized across backend and frontend layers.
 
-The core intent is to protect user credentials, voting actions, and system configurations against breaches or corruption, while also enabling audit trails and maintaining consistent application behaviour across all user sessions.
+The core intent is to protect user credentials, voting actions, and system configurations against breaches or corruption, while also enabling audit trails and maintaining consistent application behavior across all user sessions.
 
 ### **3. Goal / Objective**
 
@@ -16,24 +16,22 @@ The core intent is to protect user credentials, voting actions, and system confi
 * Ensure real-time syncing between backend data and frontend UI components.
 * Maintain a normalized, performant, and scalable database schema.
 
-### **4. Definition of Done for the Epic**
-* Passwords are securely hashed using bcrypt.
+### **4. Definition of Done for the Epic**\
 * JWTs or session tokens are encrypted.
 * Backend enforces voting rules such as voting period limits and one-vote-per-user.
 * Frontend is updated in real-time (e.g., using WebSockets) with relevant voting or result data.
 * All database operations follow best practices for schema normalization and indexing.
-* Every significant operation (vote, login, election edit) is logged with a timestamp.
+* Every significant operation (vote, election edit) is logged with a timestamp.
 * Admins can review audit logs for transparency and debugging.
 
 ### **5. Associated User Stories**
 
 ###5.1 * [User Story: Hashed Passwords and Encrypted Tokens]
-  - Passwords stored using `bcrypt`.
   - Tokens encrypted using libraries like `cryptography`.
 
 ###5.2 * [User Story: Real-Time Data Sync]
   - Real-time frontend updates using WebSockets.
-  - Voting results, turnout data, and election status reflect backend state without reload.
+  - Voting results, turnout data, and election status reflect backend state without reloading.
 
 ###5.3 * [User Story: Backend Voting Rules Enforcement]
   - One vote per user rule.
@@ -58,7 +56,7 @@ The core intent is to protect user credentials, voting actions, and system confi
 * Blockchain-based vote verification (not in this iteration).
 * Machine learning-based fraud detection or anomaly monitoring.
 * Exporting logs to third-party systems like Splunk or ELK Stack.
-* Multi-region database replication or distributed systems architecture.
+* Multi-region database replication or distributed system architecture.
 
 ### **8. Metrics / Success Measurement**
 
@@ -69,7 +67,7 @@ The core intent is to protect user credentials, voting actions, and system confi
 ### **9. Notes / Discussion / **
 
 ### Notes:
-* Use a consistent component library/ fraework
+* Use a consistent component library/ framework
 * All actions should trigger immediate visual response (confirmation, error, loading).
 * UI audit to be run using accessibility testing tools (e.g., Lighthouse, Axe).
 

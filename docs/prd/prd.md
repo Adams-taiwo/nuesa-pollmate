@@ -29,13 +29,13 @@ Product Requirements Document (PRD):
 3. High Level Overview of Key Features
 
 ### Authentication & Access
-# Voter/ Admin login via student ID and token
+# Voter/ Admin login via student ID and matriculation number
 # Secure session or JWT-based authentication
 # Role-based access control (voter and admin)
 
 ### Voting System
 # List of active elections a user can vote in
-# Display of candidates/options in ballot format
+# Display of candidates/options
 # Candidate profiles (name, photo, manifesto, past achievements)
 # One-vote-per-user enforcement
 # Vote submission confirmation
@@ -82,7 +82,7 @@ Product Requirements Document (PRD):
 5. Success Metrics
 # Reduction in vote counting time by at least 95%.
 # At least 85% of eligible students vote within the voting period.
-# System uptime during the election period exceeds 99.5%.
+# System uptime during the election period exceeds 99%.
 # At least 90% of students report the voting process as convenient and easy.
 # Cost of running elections reduced by at least 60% compared to paper-based methods.
 # No reported incidents of voting fraud or duplicate voting.
