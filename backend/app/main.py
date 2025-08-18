@@ -6,9 +6,7 @@ from .api.routers import (
     auth as auth_router,
     candidates as candidates_router
 )
-from .core.config import Settings
 
-settings = Settings()
 
 app = FastAPI(
     title="NUESA PollMate",
@@ -25,7 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files directory for serving uploaded files
+# Directory for saving uploaded files
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Include routers

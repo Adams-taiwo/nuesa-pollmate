@@ -20,7 +20,7 @@ from ...schemas.candidate import (
     CandidateUpdate,
 )
 from ...models.audit_log import AuditLog
-from ...models.user import User
+from ...models.student import User
 
 router = APIRouter(prefix="/candidates", tags=["candidates"])
 
@@ -47,7 +47,7 @@ async def create_candidate(
 ):
     """Create a new candidate."""
     # Verify user exists
-    user_query = select(User).where(User.id == candidate.user_id)
+    user_query = select(User).where(User.student_id == candidate.user_id)
     user_result = await session.execute(user_query)
     if not user_result.scalar_one_or_none():
         raise HTTPException(
@@ -117,7 +117,7 @@ async def list_candidates(
 ):
     """List all candidates, optionally filtered by election or position."""
     query = select(Candidate)
-    
+
     if election_id:
         query = query.where(Candidate.election_id == election_id)
     if position:
@@ -137,13 +137,13 @@ async def get_candidate(
         select(Candidate).where(Candidate.id == candidate_id)
     )
     candidate = result.scalar_one_or_none()
-    
+
     if not candidate:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Candidate not found"
         )
-    
+
     return candidate
 
 
@@ -161,14 +161,13 @@ async def update_candidate(
         select(Candidate).where(Candidate.id == candidate_id)
     )
     candidate = result.scalar_one_or_none()
-    
+
     if not candidate:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Candidate not found"
         )
 
-    # Handle photo upload if provided
     if photo:
         if candidate.photo_url:
             # Remove old photo
@@ -215,7 +214,7 @@ async def delete_candidate(
         select(Candidate).where(Candidate.id == candidate_id)
     )
     candidate = result.scalar_one_or_none()
-    
+
     if not candidate:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -232,7 +231,7 @@ async def delete_candidate(
             os.remove(photo_path)
 
     await session.delete(candidate)
-    
+
     # Add audit log
     audit = AuditLog(
         actor_id=admin.id,
@@ -241,5 +240,5 @@ async def delete_candidate(
         target_id=str(candidate_id)
     )
     session.add(audit)
-    
+
     await session.commit()

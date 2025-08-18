@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime, timezone
 
 if TYPE_CHECKING:
-    from .user import User
+    from .student import User
     from .election import Election
     from .vote import Vote
 
@@ -18,7 +18,7 @@ class CandidateBase(SQLModel):
     user_id: uuid.UUID = Field(
         sa_column=Column(
             PG_UUID(as_uuid=True),
-            ForeignKey("users.id"),
+            ForeignKey("users.student_id"),
             nullable=False
         )
     )

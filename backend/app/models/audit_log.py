@@ -3,7 +3,7 @@ from sqlmodel import Field, SQLModel
 from sqlalchemy import Column, DateTime, func, String, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Union
 
 # if TYPE_CHECKING:
@@ -11,10 +11,10 @@ from typing import Optional, Union
 
 
 class AuditLogBase(SQLModel):
-    actor_id: Optional[uuid.UUID] = Field(
+    actor_student_id: Optional[str] = Field(
         default=None,
-        sa_column=Column(UUID(as_uuid=True),
-                         ForeignKey("users.id"),
+        sa_column=Column(String,
+                         ForeignKey("users.student_id"),
                          nullable=True)
     )
     action: str = Field(sa_column=Column(String, nullable=False))
@@ -36,7 +36,7 @@ class AuditLog(AuditLogBase, table=True):
         sa_column=Column(UUID(as_uuid=True), primary_key=True)
     )
     created_at: datetime = Field(
-        default_factory=datetime.,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(
             DateTime(timezone=True),
             server_default=func.now(),

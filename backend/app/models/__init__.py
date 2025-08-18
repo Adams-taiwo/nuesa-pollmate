@@ -1,4 +1,4 @@
-from .user import User
+from .student import User
 from .election import Election
 from .candidate import Candidate
 from .vote import Vote

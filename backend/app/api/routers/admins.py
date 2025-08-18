@@ -8,7 +8,7 @@ from ...db.session import get_async_session
 from ...models.election import Election
 from ...models.audit_log import AuditLog
 from ...models.candidate import Candidate
-from ...models.user import User
+from ...models.student import User
 from datetime import datetime
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -182,7 +182,7 @@ async def add_candidate(
     audit = AuditLog(
         actor_id=admin if hasattr(admin, "id") else None,
         action="candidate_added", target_type="candidate",
-        target_id=str(candidate.id)
+        target_id=str(candidate.student_id)
         )
     session.add(audit)
     await session.commit()

@@ -3,18 +3,20 @@ from sqlmodel import Field, Relationship, SQLModel
 from sqlalchemy import Column, DateTime, func, String, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import field_validator
 
 if TYPE_CHECKING:
-    from .user import User
+    from .student import User
     from .candidate import Candidate
     from .election import Election
 
 
 class VoteBase(SQLModel):
-    voter_id: uuid.UUID = Field(
-        sa_column=Column(UUID(as_uuid=True), ForeignKey("users.id"),
+    student_id: str = Field(
+        default=None,
+        sa_column=Column(String,
+                         ForeignKey("users.student_id"),
                          nullable=False)
     )
     election_id: uuid.UUID = Field(
@@ -23,7 +25,8 @@ class VoteBase(SQLModel):
     )
     candidate_id: Optional[uuid.UUID] = Field(
         default=None,
-        sa_column=Column(UUID(as_uuid=True), ForeignKey("candidates.id"),
+        sa_column=Column(UUID(as_uuid=True),
+                         ForeignKey("candidates.candidate_id"),
                          nullable=True)
     )
     ballot_token: Optional[str] = Field(
@@ -51,7 +54,7 @@ class Vote(VoteBase, table=True):
         sa_column=Column(UUID(as_uuid=True), primary_key=True)
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(
             DateTime(timezone=True),
             server_default=func.now(),

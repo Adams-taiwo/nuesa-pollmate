@@ -18,6 +18,7 @@ class CandidateCreate(BaseModel):
     manifesto: Optional[str] = None
     achievements: Optional[list[str]] = Field(default_factory=list)
     photo_url: Optional[str] = None
+    is_contesting: bool = True
 
     model_config = ConfigDict(
         from_attributes=True,

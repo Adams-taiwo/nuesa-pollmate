@@ -15,9 +15,10 @@ from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
+from pydantic import field_validator
 
 if TYPE_CHECKING:
-    from .user import User
+    from .student import User
     from .candidate import Candidate
     from .vote import Vote
 
@@ -53,7 +54,7 @@ class ElectionBase(SQLModel):
                                sa_column=Column(Boolean, nullable=False))
     created_by: uuid.UUID = Field(
         sa_column=Column(UUID(as_uuid=True),
-                         ForeignKey("users.id"),
+                         ForeignKey("users.student_id"),
                          nullable=False)
     )
 
@@ -90,13 +91,32 @@ class Election(ElectionBase, table=True):
 
 
 class ElectionCreate(ElectionBase):
-    pass
+    created_by: uuid.UUID
+
+    @field_validator('end_time')
+    @classmethod
+    def validate_end_time(cls, v: datetime, info) -> datetime:
+        values = info.data
+        if 'start_time' in values and v <= values['start_time']:
+            raise ValueError('end_time must be after start_time')
+        return v
+
+    @field_validator('max_choices_per_voter')
+    @classmethod
+    def validate_max_choices(cls, v: Optional[int]) -> Optional[int]:
+        if v is not None and v < 1:
+            raise ValueError(
+                'max_choices_per_voter must be a positive integer'
+            )
+        return v
 
 
 class ElectionRead(ElectionBase):
     id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+    candidate_count: Optional[int] = None
+    vote_count: Optional[int] = None
 
 
 class ElectionUpdate(SQLModel):
@@ -108,3 +128,41 @@ class ElectionUpdate(SQLModel):
     allow_multiple_choices: Optional[bool] = False
     max_choices_per_voter: Optional[int] = None
     is_published: Optional[bool] = None
+
+    @field_validator('end_time')
+    @classmethod
+    def validate_end_time(
+        cls, v: Optional[datetime], info
+    ) -> Optional[datetime]:
+        if not v:
+            return v
+        values = info.data
+        if ('start_time' in values and
+                values['start_time'] and v <= values['start_time']):
+            raise ValueError('end_time must be after start_time')
+        return v
+
+    @field_validator('max_choices_per_voter')
+    @classmethod
+    def validate_max_choices(cls, v: Optional[int]) -> Optional[int]:
+        if v is not None and v < 1:
+            raise ValueError(
+                'max_choices_per_voter must be a positive integer'
+            )
+        return v
+
+    @field_validator('status')
+    @classmethod
+    def validate_status_transition(
+        cls, v: Optional[ElectionStatus], info
+    ) -> Optional[ElectionStatus]:
+        if not v:
+            return v
+        values = info.data
+        if (v == ElectionStatus.scheduled and
+                values.get('end_time') and
+                values['end_time'] < datetime.now(timezone.utc)):
+            raise ValueError(
+                'Cannot set status to scheduled for past elections'
+            )
+        return v

@@ -1,64 +1,51 @@
-from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
-from jose import jwt
+from jose import exceptions
+import jwt
 from fastapi import HTTPException, status
 from typing import Optional
-import secrets
-import string
+from .config import Config
+import uuid
 
-# Password hashing config
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# JWT config
-SECRET_KEY = "your-secret-key-here"  # TODO: Move to environment variables
-ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
-def generate_salt(length: int = 16) -> str:
-    """Generate a random salt for password hashing."""
-    alphabet = string.ascii_letters + string.digits
-    return ''.join(secrets.choice(alphabet) for _ in range(length))
+def create_access_token(user_data: dict,
+                        expiry: Optional[timedelta] = None,
+                        refresh: bool = False) -> str:
+    payload = {}
 
-
-def hash_password(password: str, salt: str) -> str:
-    """Hash a password with a salt using bcrypt."""
-    return pwd_context.hash(password + salt)
-
-
-def verify_password(
-        plain_password: str,
-        salt: str,
-        hashed_password: str) -> bool:
-    """Verify a password against a hash."""
-    return pwd_context.verify(plain_password + salt, hashed_password)
-
-
-def create_access_token(
-        data: dict,
-        expires_delta: Optional[timedelta] = None) -> str:
-    """Create a JWT access token."""
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+    payload['user'] = user_data
+    if expiry:
+        payload['exp'] = datetime.now(timezone.utc) + expiry
     else:
-        expire = (
-            datetime.now(timezone.utc) +
-            timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+        payload['exp'] = (datetime.now(timezone.utc) + timedelta(
+            minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
 
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    payload['jti'] = str(uuid.uuid4())
+
+    payload['refresh'] = refresh
+
+    token = jwt.encode(
+        payload=payload,
+        key=Config.JWT_SECRET_KEY,
+        algorithm=Config.JWT_ALGORITHM
+    )
+
+    return token
 
 
-def verify_token(token: str) -> dict:
-    """Verify a JWT token and return the payload."""
+def decode_token(token: str) -> dict:
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
-    except jwt.JWTError:
+        token_data = jwt.decode(
+            jwt=token,
+            key=Config.JWT_SECRET_KEY,
+            algorithms=[Config.JWT_ALGORITHM]
+        )
+        return token_data
+
+    except jwt.PyJWTError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
         )
