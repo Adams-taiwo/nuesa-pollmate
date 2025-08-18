@@ -1,41 +1,30 @@
+from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
+
 from ...schemas import admin as admin_schemas
 from ...db.session import get_async_session
 from ...models.election import Election
 from ...models.audit_log import AuditLog
 from ...models.candidate import Candidate
 from ...models.student import User
+from ...services import admin_service
+from ...services import election_service
+
 from datetime import datetime
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
-async def get_admin_user():
-    """Should return current user and check if they are an admin."""
-    return None
-
-
 @router.post("/elections", response_model=admin_schemas.ElectionCreateResponse)
 async def create_election(
-    payload: admin_schemas.ElectionCreatePayload,
+    payload: admin_schemas.ElectionCreateSchema,
     session: AsyncSession = Depends(get_async_session),
-    admin=Depends(get_admin_user),
+    admin=Depends(admin_service.get_admin_user),
 ):
-    # create election
-    election = Election(
-        title=payload.title,
-        description=payload.description,
-        start_time=payload.start_time,
-        end_time=payload.end_time,
-        created_by=payload.created_by,
-    )
-    session.add(election)
-    await session.commit()
-    await session.refresh(election)
+    election = await election_service.create_election(payload, session)
 
     # log audit
     audit = AuditLog(
@@ -56,27 +45,12 @@ async def create_election(
 @router.put("/elections/{election_id}")
 async def update_election(
     election_id: UUID,
-    payload: admin_schemas.ElectionUpdatePayload,
+    payload: admin_schemas.ElectionUpdateSchema,
     session: AsyncSession = Depends(get_async_session),
-    admin=Depends(get_admin_user),
+    admin=Depends(admin_service.get_admin_user),
 ):
-    q = select(Election).where(Election.id == election_id)
-    result = await session.execute(q)
-    election = result.scalar_one_or_none()
-    if not election:
-        raise HTTPException(status_code=404, detail="Election not found")
-    # allow updates only before start_time
-    if election.start_time <= datetime.utcnow():
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot modify election after it has started",
-        )
-
-    for field, value in payload.dict(exclude_unset=True).items():
-        setattr(election, field, value)
-
-    session.add(election)
-    await session.commit()
+    election = await election_service.update_election(
+        election_id, payload, session)
 
     # audit log
     audit = AuditLog(
@@ -97,20 +71,9 @@ async def update_election(
 async def delete_election(
     election_id: UUID,
     session: AsyncSession = Depends(get_async_session),
-    admin=Depends(get_admin_user),
+    admin=Depends(admin_service.get_admin_user),
 ):
-    q = select(Election).where(Election.id == election_id)
-    result = await session.execute(q)
-    election = result.scalar_one_or_none()
-    if not election:
-        raise HTTPException(status_code=404, detail="Election not found")
-    if election.start_time <= datetime.utcnow():
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot delete an election that has already started",
-        )
-    await session.delete(election)
-    await session.commit()
+    election = await election_service.delete_election(election_id, session)
 
     # audit
     audit = AuditLog(
@@ -128,8 +91,9 @@ async def delete_election(
 @router.get("/audit/logs", response_model=List[admin_schemas.AuditLogRead])
 async def get_audit_logs(
     limit: int = 100,
+    offset: int = 0,
     session: AsyncSession = Depends(get_async_session),
-    admin=Depends(get_admin_user),
+    admin=Depends(admin_service.get_admin_user),
 ):
     # use table column to build order_by expression to avoid typing issues
     created_col = AuditLog.__table__.c.created_at
@@ -142,9 +106,8 @@ async def get_audit_logs(
 @router.get("/db/schema")
 async def get_db_schema(
     session: AsyncSession = Depends(get_async_session),
-    admin=Depends(get_admin_user),
+    admin=Depends(admin_service.get_admin_user),
 ):
-    # Return table names - dev-only utility
     from sqlalchemy import text
 
     result = await session.execute(
@@ -161,7 +124,7 @@ async def get_db_schema(
 async def add_candidate(
     payload: dict,
     session: AsyncSession = Depends(get_async_session),
-    admin=Depends(get_admin_user)
+    admin=Depends(admin_service.get_admin_user)
   ):
     """
       Minimal add candidate endpoint. Payload should include user_id

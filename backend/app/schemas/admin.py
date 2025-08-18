@@ -4,7 +4,7 @@ from datetime import datetime
 from ..models.election import ElectionStatus
 
 
-class ElectionCreate(BaseModel):
+class ElectionCreateSchema(BaseModel):
     title: str
     description: Optional[str]
     start_time: datetime
@@ -21,7 +21,7 @@ class ElectionCreateResponse(BaseModel):
     election_id: str
 
 
-class ElectionUpdate(BaseModel):
+class ElectionUpdateSchema(BaseModel):
     title: Optional[str]
     description: Optional[str]
     start_time: Optional[datetime]
@@ -30,7 +30,7 @@ class ElectionUpdate(BaseModel):
     is_published: Optional[bool] = None
 
 
-class AuditLogRead(BaseModel):
+class AuditLogReadSchema(BaseModel):
     id: str
     actor_id: Optional[str]
     action: str

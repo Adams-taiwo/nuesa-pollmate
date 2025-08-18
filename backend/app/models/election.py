@@ -52,10 +52,12 @@ class ElectionBase(SQLModel):
                                                  sa_column=Column(Integer))
     is_published: bool = Field(default=False,
                                sa_column=Column(Boolean, nullable=False))
-    created_by: uuid.UUID = Field(
-        sa_column=Column(UUID(as_uuid=True),
+    created_by: str = Field(
+        sa_column=Column(String,
                          ForeignKey("users.student_id"),
-                         nullable=False)
+                         nullable=False),
+        max_length=9,
+        min_length=7
     )
 
 
@@ -91,7 +93,6 @@ class Election(ElectionBase, table=True):
 
 
 class ElectionCreate(ElectionBase):
-    created_by: uuid.UUID
 
     @field_validator('end_time')
     @classmethod

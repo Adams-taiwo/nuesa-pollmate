@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta, timezone
-from jose import exceptions
 import jwt
 from fastapi import HTTPException, status
 from typing import Optional
