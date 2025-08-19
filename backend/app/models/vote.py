@@ -49,10 +49,9 @@ class VoteBase(SQLModel):
 class Vote(VoteBase, table=True):
     __tablename__ = "votes"  # SQLModel manages this internally
 
-    id: uuid.UUID = Field(
-        default_factory=uuid.uuid4,
-        sa_column=Column(UUID(as_uuid=True), primary_key=True)
-    )
+    id: uuid.UUID = Field(default_factory=uuid.uuid4,
+                          sa_column=Column(UUID(as_uuid=True), primary_key=True))
+
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(

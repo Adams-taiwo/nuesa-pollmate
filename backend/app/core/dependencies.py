@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from ..db.session import get_async_session
 from ..models.student import User
-from ..core.auth_utils import verify_token
+from ..core.auth_utils import decode_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/token")
 
@@ -20,7 +20,7 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    payload = verify_token(token)
+    payload = decode_token(token)
     matric_number: str = payload.get("sub")
     if matric_number is None:
         raise credentials_exception

@@ -10,8 +10,8 @@ class CandidatePhotoUpload(BaseModel):
     photo: UploadFile = Field(..., description="Candidate's image")
 
 
-class CandidateCreate(BaseModel):
-    user_id: UUID  # This is meant to be student ID
+class CandidateCreateSchema(BaseModel):
+    student_id: str
     election_id: UUID
     position: str
     bio: Optional[str] = None
@@ -38,12 +38,13 @@ class CandidateCreate(BaseModel):
         })
 
 
-class CandidateUpdate(BaseModel):
+class CandidateUpdateSchema(BaseModel):
     position: Optional[str] = None
     bio: Optional[str] = None
     manifesto: Optional[str] = None
     achievements: Optional[list[str]] = None
     photo_url: Optional[str] = None
+    is_contesting: Optional[bool] = None
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -56,12 +57,13 @@ class CandidateUpdate(BaseModel):
                 "achievements": ["Some New achievements"],
                 "photo_url": """
                 https://POLLMate/photos/candidate123.jpg
-                """
+                """,
+                "is_contesting": True
             }
         })
 
 
-class CandidateRead(CandidateCreate):
+class CandidateRead(CandidateCreateSchema):
     created_at: datetime
     updated_at: datetime
 

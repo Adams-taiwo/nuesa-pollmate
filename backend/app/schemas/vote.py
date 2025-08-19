@@ -2,8 +2,7 @@ from pydantic import BaseModel, Field
 from uuid import UUID
 
 
-class VoteSchema(BaseModel):
-    id: UUID
+class VoteCreateSchema(BaseModel):
     student_id: str
     election_id: UUID
     candidate_id: UUID

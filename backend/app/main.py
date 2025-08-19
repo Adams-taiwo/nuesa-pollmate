@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from .api.routers import (
+from app.api.routers import (
     admins as admins_router,
     auth as auth_router,
     candidates as candidates_router
@@ -27,6 +27,6 @@ app.add_middleware(
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Include routers
-app.include_router(auth_router.router, prefix="/api/v1/auth")
-app.include_router(admins_router.router, prefix="/api/v1/admin")
-app.include_router(candidates_router.router, prefix="/api/v1/candidates")
+app.include_router(auth_router.router,)
+app.include_router(admins_router.router,)
+app.include_router(candidates_router.router,)

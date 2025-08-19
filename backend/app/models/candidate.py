@@ -5,6 +5,7 @@ from sqlalchemy import (
     Text, Boolean, UniqueConstraint, text
 )
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
+from sqlalchemy.types import JSON
 import uuid
 from datetime import datetime, timezone
 
@@ -15,12 +16,14 @@ if TYPE_CHECKING:
 
 
 class CandidateBase(SQLModel):
-    user_id: uuid.UUID = Field(
+    student_id: str = Field(
         sa_column=Column(
-            PG_UUID(as_uuid=True),
+            String,
             ForeignKey("users.student_id"),
             nullable=False
-        )
+        ),
+        min_length=6,
+        max_length=8,
     )
     election_id: uuid.UUID = Field(
         sa_column=Column(
@@ -48,7 +51,7 @@ class CandidateBase(SQLModel):
 class Candidate(CandidateBase, table=True):
     __tablename__ = "candidates"
     __table_args__ = (
-        UniqueConstraint("user_id",
+        UniqueConstraint("student_id",
                          "election_id",
                          name="uq_candidate_user_election"),
     )
@@ -81,14 +84,15 @@ class Candidate(CandidateBase, table=True):
     votes: list["Vote"] = Relationship(back_populates="candidate")
 
 
-class CandidateCreate(CandidateBase):
-    pass
+# class CandidateCreate(Candidate):
+#     pass
 
 
 class CandidateRead(CandidateBase):
     candidate_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+    election_id: uuid.UUID
 
 
 class CandidateUpdate(SQLModel):
@@ -96,5 +100,6 @@ class CandidateUpdate(SQLModel):
     is_contesting: Optional[bool] = None
     bio: Optional[str] = None
     manifesto: Optional[str] = None
-    achievements: Optional[List[str]] = None
+    achievements: Optional[List[str]] = Field(default=None,
+                                              sa_column=Column(JSON))
     photo_url: Optional[str] = None

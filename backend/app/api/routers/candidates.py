@@ -15,9 +15,9 @@ from ...core.dependencies import get_admin_user
 from ...models.candidate import Candidate
 from ...models.election import Election
 from ...schemas.candidate import (
-    CandidateCreate,
+    CandidateCreateSchema,
     CandidateRead,
-    CandidateUpdate,
+    CandidateUpdateSchema,
 )
 from ...models.audit_log import AuditLog
 from ...models.student import User
@@ -40,7 +40,7 @@ async def save_upload_file(file: UploadFile, filename: str) -> str:
 
 @router.post("", response_model=CandidateRead)
 async def create_candidate(
-    candidate: CandidateCreate,
+    candidate: CandidateCreateSchema,
     photo: Optional[UploadFile] = File(None),
     session: AsyncSession = Depends(get_async_session),
     admin: User = Depends(get_admin_user)
@@ -150,7 +150,7 @@ async def get_candidate(
 @router.patch("/{candidate_id}")
 async def update_candidate(
     candidate_id: UUID,
-    updates: CandidateUpdate,
+    updates: CandidateUpdateSchema,
     photo: Optional[UploadFile] = File(None),
     session: AsyncSession = Depends(get_async_session),
     admin: User = Depends(get_admin_user)

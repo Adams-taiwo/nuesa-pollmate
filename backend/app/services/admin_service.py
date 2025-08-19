@@ -1,8 +1,8 @@
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
-from app.db.session import get_async_session
-from app.models.student import User, UserRole, UserCreate
+from ..db.session import get_async_session
+from ..models.student import User, UserRole
 
 
 async def get_admin_user(
