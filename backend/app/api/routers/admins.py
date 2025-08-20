@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, File
+from fastapi import APIRouter, Depends, status
 from uuid import UUID
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,20 +6,36 @@ from sqlmodel import select
 
 from ...schemas import (admin as admin_schemas,
                         candidate as candidate_schemas,
+                        student as student_schemas,
                         vote as vote_schemas)
 from ...db.session import get_async_session
-from ...models.election import Election
 from ...models.audit_log import AuditLog
-from ...models.candidate import Candidate
-from ...models.student import User
+from ...models.student import UserRead
 from ...services import (admin_service,
+                         audit_log_service,
                          election_service,
                          candidate_service,
                          voter_service)
 
-from datetime import datetime
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+@router.post("/create", response_model=UserRead)
+async def create_admin(
+    payload: student_schemas.AdminCreateSchema,
+    session: AsyncSession = Depends(get_async_session),
+):
+    new_admin = await admin_service.create_admin_user(payload, session)
+
+    _ = audit_log_service.create_audit_log(
+        actor_id=new_admin.student_id,
+        action="Admin Created",
+        target_type="user",
+        target_id=new_admin.student_id,
+        session=session)
+
+    return UserRead.model_validate(new_admin)
 
 
 @router.post("/elections", response_model=admin_schemas.ElectionCreateResponse)
@@ -30,14 +46,13 @@ async def create_election(
 ):
     election = await election_service.create_election(payload, session)
 
-    # audit = AuditLog(
-    #     actor_id=payload.created_by,
-    #     action="election_created",
-    #     target_type="election",
-    #     target_id=str(election.id),
-    # )
-    # session.add(audit)
-    # await session.commit()
+    _ = audit_log_service.create_audit_log(
+        actor_id=payload.created_by,
+        action="election_created",
+        target_type="election",
+        target_id=str(election.id),
+        session=session
+    )
 
     return election
 
@@ -53,15 +68,13 @@ async def update_election(
     election = await election_service.update_election(
         election_id, payload, session)
 
-    # audit log
-    # audit = AuditLog(
-    #     actor_id=admin if hasattr(admin, "id") else None,
-    #     action="election_updated",
-    #     target_type="election",
-    #     target_id=str(election.id),
-    # )
-    # session.add(audit)
-    # await session.commit()
+    _ = audit_log_service.create_audit_log(
+        actor_id=admin if hasattr(admin, "id") else None,
+        action="election_updated",
+        target_type="election",
+        target_id=str(election.id),
+        session=session
+    )
 
     return election
 
@@ -76,15 +89,13 @@ async def delete_election(
 ):
     _ = await election_service.delete_election(election_id, session)
 
-    # audit
-    # audit = AuditLog(
-    #     actor_id=admin if hasattr(admin, "id") else None,
-    #     action="election_deleted",
-    #     target_type="election",
-    #     target_id=str(election.id),
-    # )
-    # session.add(audit)
-    # await session.commit()
+    _ = audit_log_service.create_audit_log(
+        actor_id=admin if hasattr(admin, "id") else None,
+        action="Election Deleted",
+        target_type="election",
+        target_id=election_id,
+        session=session
+    )
 
     return
 
@@ -92,7 +103,7 @@ async def delete_election(
 @router.get("/audit/logs",
             response_model=List[admin_schemas.AuditLogReadSchema])
 async def get_audit_logs(
-    limit: int = 100,
+    limit: int = 10,
     offset: int = 0,
     session: AsyncSession = Depends(get_async_session),
     admin=Depends(admin_service.get_admin_user),
@@ -132,13 +143,13 @@ async def add_candidate(
     candidate = await candidate_service.create_candidate(
         payload, session
     )
-    # audit = AuditLog(
-    #     actor_id=admin if hasattr(admin, "id") else None,
-    #     action="candidate_added", target_type="candidate",
-    #     target_id=str(candidate.student_id)
-    #     )
-    # session.add(audit)
-    # await session.commit()
+    _ = audit_log_service.create_audit_log(
+        actor_id=admin if hasattr(admin, "id") else None,
+        action="Candidate Added",
+        target_type="candidate",
+        target_id=candidate.student_id,
+        session=session
+        )
     return candidate
 
 
@@ -153,12 +164,14 @@ async def update_candidate(
         candidate_id, payload, session
     )
 
-    # audit = AuditLog(actor_id=admin if hasattr(admin, "id") else None,
-    #                  action="candidate_updated",
-    #                  target_type="candidate",
-    #                  target_id=str(candidate.id))
-    # session.add(audit)
-    # await session.commit()
+    _ = audit_log_service.create_audit_log(
+        actor_id=admin if hasattr(admin, "id") else None,
+        action="Candidate Update",
+        target_type="candidate",
+        target_id=updated_candidate.student_id,
+        session=session
+    )
+
     return updated_candidate
 
 
@@ -173,12 +186,14 @@ async def delete_candidate(
     _ = await candidate_service.delete_candidate(
         candidate_id, session
     )
-    # audit = AuditLog(actor_id=admin if hasattr(admin, "id") else None,
-    #                  action="candidate_deleted",
-    #                  target_type="candidate",
-    #                  target_id=str(candidate.id))
-    # session.add(audit)
-    # await session.commit()
+
+    _ = audit_log_service.create_audit_log(
+      actor_id=admin if hasattr(admin, "id") else None,
+      action="Candidate Deleted",
+      target_type="candidate",
+      target_id=candidate_id,
+      session=session)
+
     return
 
 
@@ -186,13 +201,14 @@ async def delete_candidate(
 async def add_voter(payload: vote_schemas.VoteCreateSchema,
                     session: AsyncSession = Depends(get_async_session),
                     admin=Depends(admin_service.get_admin_user)):
-    voter = await voter_service.create_vote(payload, session)
-    # audit = AuditLog(actor_id=admin if hasattr(admin, "id") else None,
-    #                  action="voter_added",
-    #                  target_type="user",
-    #                  target_id=str(user.id))
-    # session.add(audit)
-    # await session.commit()
+    voter = await voter_service.create_voter(payload, session)
+
+    _ = audit_log_service.create_audit_log(
+        actor_id=admin if hasattr(admin, "id") else None,
+        action="Voter Added",
+        target_type="user",
+        target_id=voter.student_id)
+
     return voter
 
 
@@ -201,11 +217,12 @@ async def remove_voter(student_id: str,
                        session: AsyncSession = Depends(get_async_session),
                        admin=Depends(admin_service.get_admin_user)):
     _ = await voter_service.delete_voter(student_id, session)
-    # audit = AuditLog(actor_id=admin if hasattr(admin, "id") else None,
-    #                  action="voter_removed", target_type="user",
-    #                  target_id=str(user.id))
-    # session.add(audit)
-    # await session.commit()
+
+    _ = audit_log_service.create_audit_log(
+        actor_id=admin if hasattr(admin, "id") else None,
+        action="Voter Removed",
+        target_type="user",
+        target_id=student_id)
     return
 
 
@@ -218,11 +235,13 @@ async def toggle_election_publishing(
     election = await election_service.toggle_election_status(
         election_id, session
     )
-    # audit = AuditLog(actor_id=admin if hasattr(admin, "id") else None,
-    #                  action="election_toggled", target_type="election",
-    #                  target_id=str(election.id))
-    # session.add(audit)
-    # await session.commit()
+
+    _ = audit_log_service.create_audit_log(
+        actor_id=admin if hasattr(admin, "id") else None,
+        action="Election State Toggled",
+        target_type="election",
+        target_id=election_id)
+
     return {"is_published": election.is_published}
 
 

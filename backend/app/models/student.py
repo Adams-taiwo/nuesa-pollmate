@@ -1,7 +1,8 @@
 from typing import TYPE_CHECKING, Optional
 from sqlmodel import Field, Relationship, SQLModel
-from sqlalchemy import Column, String, Enum as SQLEnum, Boolean
+from sqlalchemy import Column, String, Enum as SQLEnum, Boolean, UUID
 from enum import Enum
+import uuid
 
 if TYPE_CHECKING:
     from .candidate import Candidate
@@ -16,23 +17,21 @@ class UserRole(str, Enum):
 
 
 class UserBase(SQLModel):
-    student_id: Optional[str] = Field(
-        default=None,
-        sa_column=Column(String,
-                         primary_key=True,
-                         unique=True,
-                         index=True,
-                         nullable=False),
-        regex=r'^M\d{7}$',
-        description="Student ID in format MYYNNNNN"
+    id: uuid.UUID = Field(
+        default_factory=uuid.uuid4,
+        sa_column=Column(UUID(as_uuid=True), primary_key=True)
+        )
+    student_id: str = Field(
+        sa_column=Column(String, unique=True, index=True, nullable=False)
     )
+
     matric_number: str = Field(
         default=None,
         sa_column=Column(String,
                          unique=True,
                          index=True,
                          nullable=False),
-        regex=r'^\d{4}/1/90\d{3}[A-Z]{2}$',
+        # regex=r'^\d{4}/1/90\d{3}[A-Z]{2}$',
         description="Student matriculation number in format YYYY/1/NNNNN"
     )
     role: UserRole = Field(
@@ -97,11 +96,12 @@ class UserUpdate(SQLModel):
 class UserLogin(SQLModel):
     student_id: str = Field(
         default=None,
-        regex=r'^M\d{7}$',
+        nullable=False,
     )
     matric_number: str = Field(
         default=None,
-        regex=r'^\d{4}/1/90\d{3}[A-Z]{2}$',
+        nullable=False,
+        # regex=r'^\d{4}/1/90\d{3}[A-Z]{2}$',
     )
 
     # model_config = ConfigDict(

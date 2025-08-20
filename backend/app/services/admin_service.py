@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from ..db.session import get_async_session
 from ..models.student import User, UserRole
+from ..schemas.student import AdminCreateSchema
 
 
 async def get_admin_user(
@@ -27,13 +28,24 @@ async def get_admin_user(
 
     return user
 
-# async def create_admin_user(
-#         user_data: UserCreate,
-#         session: AsyncSession = Depends(get_async_session)
-# ):
-#     user = User(**user_data.model_dump())
-#     user.role = UserRole.admin
 
-#     await session.add(user)
-#     await session.commit()
-#     await session.refresh(user)
+async def create_admin_user(
+        user_data: AdminCreateSchema,
+        session: AsyncSession = Depends(get_async_session)
+):
+    user = User(**user_data.model_dump())
+    # user.role = UserRole.admin
+    user.is_active = bool(user_data.is_active)
+
+    try:
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=e
+        )
+
+    return user

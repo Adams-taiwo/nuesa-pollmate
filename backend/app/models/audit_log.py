@@ -11,20 +11,23 @@ from typing import Optional, Union
 
 
 class AuditLogBase(SQLModel):
-    actor_student_id: Optional[str] = Field(
+    actor_id: Optional[uuid.UUID] = Field(
         default=None,
-        sa_column=Column(String,
-                         ForeignKey("users.student_id"),
-                         nullable=True)
+        sa_column=Column(
+            UUID(as_uuid=True),
+            ForeignKey("users.id"),
+            nullable=True
+        )
     )
     action: str = Field(sa_column=Column(String, nullable=False))
     target_type: str = Field(sa_column=Column(String, nullable=False))
-    target_id: Union[uuid.UUID, str] = Field(sa_column=Column(
-        String,
-        nullable=False))
+    target_id: uuid.UUID = Field(
+        sa_column=Column(UUID(as_uuid=True), nullable=False)
+    )
     metadata_: dict = Field(
         default_factory=dict,
-        sa_column=Column("metadata", JSONB, nullable=False)
+        sa_column=Column("metadata", JSONB, nullable=False),
+        alias="metadata"
     )
 
 
