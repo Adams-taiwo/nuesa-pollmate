@@ -33,19 +33,29 @@ async def create_admin_user(
         user_data: AdminCreateSchema,
         session: AsyncSession = Depends(get_async_session)
 ):
-    user = User(**user_data.model_dump())
-    # user.role = UserRole.admin
-    user.is_active = bool(user_data.is_active)
+    statement = select(User).where(User.student_id == user_data.student_id,
+                                   User.role == UserRole.admin)
+    result = await session.execute(statement)
+    exists = result.scalar_one_or_none()
+    if exists is None:
+        user = User(**user_data.model_dump())
+        # user.role = UserRole.admin
+        user.is_active = bool(user_data.is_active)
 
-    try:
-        session.add(user)
-        await session.commit()
-        await session.refresh(user)
+        try:
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
 
-    except Exception as e:
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=e
+            )
+
+        return user
+    else:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=e
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"Admin having that student id already exists"}
         )
-
-    return user

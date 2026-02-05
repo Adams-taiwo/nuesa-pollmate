@@ -7,11 +7,11 @@ import uuid
 
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+REFRESH_TOKEN_EXPIRY_MINUTES = 300
 
 
 def create_access_token(user_data: dict,
-                        expiry: Optional[timedelta] = None,
-                        refresh: bool = False) -> str:
+                        expiry: Optional[timedelta] = None) -> str:
     payload = {}
 
     payload['user'] = user_data
@@ -23,7 +23,25 @@ def create_access_token(user_data: dict,
 
     payload['jti'] = str(uuid.uuid4())
 
-    payload['refresh'] = refresh
+    token = jwt.encode(
+        payload=payload,
+        key=Config.JWT_SECRET_KEY,
+        algorithm=Config.JWT_ALGORITHM
+    )
+
+    return token
+
+
+# This might be completely unecessary
+def create_refresh_token(user_data: dict,
+                        expiry: Optional[timedelta] = None) -> str:
+    payload = {}
+
+    payload['user'] = user_data
+    payload['exp'] = datetime.now(timezone.utc) + timedelta(
+        minutes=REFRESH_TOKEN_EXPIRY_MINUTES)
+    payload['jti'] = str(uuid.uuid4())
+    payload['refresh'] = True
 
     token = jwt.encode(
         payload=payload,

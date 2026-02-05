@@ -7,6 +7,7 @@ from ...db.session import get_async_session
 from ...models.student import User
 from ...core.auth_utils import (
     create_access_token,
+    create_refresh_token,
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
 from ...schemas.student import StudentLogin
@@ -47,11 +48,9 @@ async def login_students(
         },
         expiry=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    refresh_token = create_access_token(
+    refresh_token = create_refresh_token(
         user_data={"matric_number": user.matric_number,
-                   "student_id": user.student_id},
-        expiry=timedelta(hours=8),
-        refresh=True
+                   "student_id": user.student_id}
     )
 
     return JSONResponse(

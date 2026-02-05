@@ -1,10 +1,11 @@
 from pydantic import BaseModel, Field
+import uuid
 from datetime import datetime
 
 
 class AuditLogBaseSchema(BaseModel):
-    actor_student_id: str = Field(min_length=8,
-                                  max_length=8,)
+    actor_id: str = Field(min_length=8,
+                          max_length=8,)
     #                              pattern=r'M\d{7}$'
     action: str
     target_type: str
@@ -16,6 +17,6 @@ class AuditLogCreateSchema(AuditLogBaseSchema):
     pass
 
 
-class AuditLogRead(AuditLogBaseSchema):
-    id: str
+class AuditLogReadSchema(AuditLogBaseSchema):
+    id: uuid.UUID
     created_at: datetime

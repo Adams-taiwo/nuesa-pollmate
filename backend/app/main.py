@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -6,12 +7,21 @@ from app.api.routers import (
     auth as auth_router,
     candidates as candidates_router
 )
+from contextlib import asynccontextmanager
+from app.db.session import init_db
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Starting server ...")
+    await init_db()
+    yield
 
 app = FastAPI(
     title="NUESA PollMate",
     description="A secure e-voting platform for FUTMinna student elections",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Configure CORS

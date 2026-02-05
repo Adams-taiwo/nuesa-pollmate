@@ -15,7 +15,7 @@ class UserCreateSchema(UserBase):
 
 
 class AdminCreateSchema(UserCreateSchema):
-    role: UserRole  # = Field(default=UserRole.admin)
+    role: UserRole = Field(default=UserRole.admin)
 
 
 class UserRead(BaseModel):

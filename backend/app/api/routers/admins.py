@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from uuid import UUID
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +10,9 @@ from ...schemas import (admin as admin_schemas,
                         vote as vote_schemas)
 from ...db.session import get_async_session
 from ...models.audit_log import AuditLog
-from ...models.student import UserRead
+from ...models.candidate import Candidate
+from ...models.election import Election
+from ...models.student import UserRead, User, UserRole
 from ...services import (admin_service,
                          audit_log_service,
                          election_service,
@@ -21,7 +23,9 @@ from ...services import (admin_service,
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
-@router.post("/create", response_model=UserRead)
+@router.post("/create",
+             response_model=UserRead,
+             status_code=status.HTTP_201_CREATED)
 async def create_admin(
     payload: student_schemas.AdminCreateSchema,
     session: AsyncSession = Depends(get_async_session),
@@ -38,7 +42,37 @@ async def create_admin(
     return UserRead.model_validate(new_admin)
 
 
-@router.post("/elections", response_model=admin_schemas.ElectionCreateResponse)
+@router.get("/admins")
+async def get_admins(
+    session: AsyncSession = Depends(get_async_session),
+    admin=Depends(admin_service.get_admin_user)
+):
+    statement = select(User).where(User.role == UserRole.admin,)
+    results = await session.execute(statement)
+    admins = results.scalars().all()
+    return [UserRead.model_validate(admin) for admin in admins]
+
+
+@router.get("/all_elections",
+            response_model=List[admin_schemas.ElectionCreateResponse])
+async def get_all_elections(
+    session: AsyncSession = Depends(get_async_session),
+    admin=Depends(admin_service.get_admin_user),
+):
+    if admin.role == UserRole.admin:
+        statement = select(Election).where(
+            Election.title != "")
+        results = await session.execute(statement)
+        elections = results.scalars().all()
+
+    return [
+        admin_schemas.ElectionCreateResponse.model_validate(election) for election in elections
+        ]
+
+
+@router.post("/elections",
+             response_model=admin_schemas.ElectionCreateResponse,
+             status_code=status.HTTP_201_CREATED)
 async def create_election(
     payload: admin_schemas.ElectionCreateSchema,
     session: AsyncSession = Depends(get_async_session),
@@ -46,7 +80,7 @@ async def create_election(
 ):
     election = await election_service.create_election(payload, session)
 
-    _ = audit_log_service.create_audit_log(
+    _ = await audit_log_service.create_audit_log(
         actor_id=payload.created_by,
         action="election_created",
         target_type="election",
@@ -68,8 +102,8 @@ async def update_election(
     election = await election_service.update_election(
         election_id, payload, session)
 
-    _ = audit_log_service.create_audit_log(
-        actor_id=admin if hasattr(admin, "id") else None,
+    _ = await audit_log_service.create_audit_log(
+        actor_id=admin if hasattr(admin, "id") else "",
         action="election_updated",
         target_type="election",
         target_id=str(election.id),
@@ -87,13 +121,21 @@ async def delete_election(
     session: AsyncSession = Depends(get_async_session),
     admin=Depends(admin_service.get_admin_user),
 ):
-    _ = await election_service.delete_election(election_id, session)
+    if admin.role == UserRole.admin:
+        del_election = await election_service.delete_election(election_id,
+                                                              session)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to delete this election"
+        )
 
-    _ = audit_log_service.create_audit_log(
-        actor_id=admin if hasattr(admin, "id") else None,
-        action="Election Deleted",
+    _ = await audit_log_service.create_audit_log(
+        actor_id=admin if hasattr(admin, "id") else "",
+        action=f"""Election having title  of
+         {del_election["election_title"]} Deleted""",
         target_type="election",
-        target_id=election_id,
+        target_id=str(election_id),
         session=session
     )
 
@@ -109,12 +151,144 @@ async def get_audit_logs(
     admin=Depends(admin_service.get_admin_user),
 ):
     created_col = AuditLog.__table__.c.created_at
-    q = select(AuditLog).order_by(created_col.desc()).limit(limit)
-    result = await session.execute(q)
+    statement = select(AuditLog).order_by(created_col.desc()).limit(limit).offset(offset)
+    result = await session.execute(statement)
     logs = result.scalars().all()
     return [
         admin_schemas.AuditLogReadSchema.model_validate(log) for log in logs
         ]
+
+
+@router.get("/candidates",
+            response_model=List[candidate_schemas.CandidateCreateSchema])
+async def get_all_candidates(
+    session: AsyncSession = Depends(get_async_session),
+    admin=Depends(admin_service.get_admin_user)
+):
+    if admin.role == UserRole.admin:
+        statement = select(Candidate).where(
+            Candidate.created_at is not None
+        )
+        results = await session.execute(statement)
+        candidates = results.scalars().all()
+
+    return [
+        candidate_schemas.CandidateRead.model_validate(candidate) for candidate in candidates
+    ]
+
+
+@router.post("/candidates", status_code=status.HTTP_201_CREATED)
+async def add_candidate(
+    payload: candidate_schemas.CandidateCreateSchema,
+    session: AsyncSession = Depends(get_async_session),
+    admin=Depends(admin_service.get_admin_user)
+  ):
+    candidate = await candidate_service.create_candidate(
+        payload, session
+    )
+    # _ = await audit_log_service.create_audit_log(
+    #     actor_id=admin if hasattr(admin, "id") else "",
+    #     action="Candidate Added",
+    #     target_type="candidate",
+    #     target_id=str(candidate.student_id),
+    #     session=session
+    #     )
+    return candidate
+
+
+@router.patch("/candidates/{candidate_id}")
+async def update_candidate(
+    candidate_id: UUID,
+    payload: candidate_schemas.CandidateUpdateSchema,
+    session: AsyncSession = Depends(get_async_session),
+    admin=Depends(admin_service.get_admin_user)
+):
+    updated_candidate = await candidate_service.update_candidate(
+        candidate_id, payload, session
+    )
+
+    # _ = await audit_log_service.create_audit_log(
+    #     actor_id=admin if hasattr(admin, "id") else "",
+    #     action="Candidate Update",
+    #     target_type="candidate",
+    #     target_id=updated_candidate.student_id,
+    #     session=session
+    # )
+
+    return updated_candidate
+
+
+@router.delete(
+        "/candidates/{candidate_id}",
+        status_code=status.HTTP_204_NO_CONTENT)
+async def delete_candidate(
+    candidate_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    admin=Depends(admin_service.get_admin_user)
+):
+    _ = await candidate_service.delete_candidate(
+        candidate_id, session
+    )
+
+    # _ = await audit_log_service.create_audit_log(
+    #   actor_id=admin if hasattr(admin, "id") else "",
+    #   action="Candidate Deleted",
+    #   target_type="candidate",
+    #   target_id=str(candidate_id),
+    #   session=session)
+
+    return
+
+
+@router.post("/voters",
+             status_code=status.HTTP_201_CREATED)
+async def add_voter(payload: vote_schemas.VoteCreateSchema,
+                    session: AsyncSession = Depends(get_async_session),
+                    admin=Depends(admin_service.get_admin_user)):
+    voter = await voter_service.create_voter(payload, session)
+
+    # _ = await audit_log_service.create_audit_log(
+    #     actor_id=admin if hasattr(admin, "id") else "",
+    #     action="Voter Added",
+    #     target_type="user",
+    #     target_id=voter.student_id)
+
+    return voter
+
+
+@router.delete("/voters/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_voter(student_id: str,
+                       voter_id: str,
+                       session: AsyncSession = Depends(get_async_session),
+                       admin=Depends(admin_service.get_admin_user)):
+    _ = await voter_service.delete_voter(voter_id, session)
+
+    # _ = await audit_log_service.create_audit_log(
+    #     actor_id=admin if hasattr(admin, "id") else "",
+    #     action="Voter Removed",
+    #     target_type="user",
+    #     target_id=student_id)
+    return
+
+
+@router.post("/elections/{election_id}/toggle",
+             status_code=status.HTTP_201_CREATED)
+async def toggle_election_publishing(
+    election_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    admin=Depends(admin_service.get_admin_user)
+):
+    election = await election_service.toggle_election_status(
+        election_id, session
+    )
+
+    _ = audit_log_service.create_audit_log(
+        actor_id=admin if hasattr(admin, "id") else "",
+        action="Election State Toggled",
+        target_type="election",
+        target_id=str(election_id))
+
+    return {"is_published": election.is_published}
 
 
 @router.get("/db/schema")
@@ -134,127 +308,17 @@ async def get_db_schema(
     return {"tables": tables}
 
 
-@router.post("/candidates")
-async def add_candidate(
-    payload: candidate_schemas.CandidateCreateSchema,
-    session: AsyncSession = Depends(get_async_session),
-    admin=Depends(admin_service.get_admin_user)
-  ):
-    candidate = await candidate_service.create_candidate(
-        payload, session
-    )
-    _ = audit_log_service.create_audit_log(
-        actor_id=admin if hasattr(admin, "id") else None,
-        action="Candidate Added",
-        target_type="candidate",
-        target_id=candidate.student_id,
-        session=session
-        )
-    return candidate
-
-
-@router.patch("/candidates/{candidate_id}")
-async def update_candidate(
-    candidate_id: UUID,
-    payload: candidate_schemas.CandidateUpdateSchema,
-    session: AsyncSession = Depends(get_async_session),
-    admin=Depends(admin_service.get_admin_user)
-):
-    updated_candidate = await candidate_service.update_candidate(
-        candidate_id, payload, session
-    )
-
-    _ = audit_log_service.create_audit_log(
-        actor_id=admin if hasattr(admin, "id") else None,
-        action="Candidate Update",
-        target_type="candidate",
-        target_id=updated_candidate.student_id,
-        session=session
-    )
-
-    return updated_candidate
-
-
-@router.delete(
-        "/candidates/{candidate_id}",
-        status_code=status.HTTP_204_NO_CONTENT)
-async def delete_candidate(
-    candidate_id: UUID,
-    session: AsyncSession = Depends(get_async_session),
-    admin=Depends(admin_service.get_admin_user)
-):
-    _ = await candidate_service.delete_candidate(
-        candidate_id, session
-    )
-
-    _ = audit_log_service.create_audit_log(
-      actor_id=admin if hasattr(admin, "id") else None,
-      action="Candidate Deleted",
-      target_type="candidate",
-      target_id=candidate_id,
-      session=session)
-
-    return
-
-
-@router.post("/voters")
-async def add_voter(payload: vote_schemas.VoteCreateSchema,
-                    session: AsyncSession = Depends(get_async_session),
-                    admin=Depends(admin_service.get_admin_user)):
-    voter = await voter_service.create_voter(payload, session)
-
-    _ = audit_log_service.create_audit_log(
-        actor_id=admin if hasattr(admin, "id") else None,
-        action="Voter Added",
-        target_type="user",
-        target_id=voter.student_id)
-
-    return voter
-
-
-@router.delete("/voters/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def remove_voter(student_id: str,
-                       session: AsyncSession = Depends(get_async_session),
-                       admin=Depends(admin_service.get_admin_user)):
-    _ = await voter_service.delete_voter(student_id, session)
-
-    _ = audit_log_service.create_audit_log(
-        actor_id=admin if hasattr(admin, "id") else None,
-        action="Voter Removed",
-        target_type="user",
-        target_id=student_id)
-    return
-
-
-@router.post("/elections/{election_id}/toggle")
-async def toggle_election_publishing(
-    election_id: UUID,
-    session: AsyncSession = Depends(get_async_session),
-    admin=Depends(admin_service.get_admin_user)
-):
-    election = await election_service.toggle_election_status(
-        election_id, session
-    )
-
-    _ = audit_log_service.create_audit_log(
-        actor_id=admin if hasattr(admin, "id") else None,
-        action="Election State Toggled",
-        target_type="election",
-        target_id=election_id)
-
-    return {"is_published": election.is_published}
-
-
 @router.get("/db/stats")
 async def get_db_stats(
     session: AsyncSession = Depends(get_async_session),
     admin=Depends(admin_service.get_admin_user),
 ):
-    # Return simple row counts per table
     from sqlalchemy import text
 
     tables_q = await session.execute(
-        text("SELECT table_name FROM information_schema.tables WHERE table_schema='public';")
+        text("""
+             SELECT table_name FROM information_schema.tables
+              WHERE table_schema='public';""")
     )
     tables = [r[0] for r in tables_q.fetchall()]
     stats = {}

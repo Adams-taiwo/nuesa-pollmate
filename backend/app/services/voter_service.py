@@ -21,7 +21,7 @@ async def get_user(
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail="Student having that id not found"
         )
 
     return user
@@ -33,7 +33,8 @@ async def create_voter(
 ):
     voter = Vote(**voter_data.model_dump())
 
-    voter.voter = await get_user(voter_data.student_id, session)
+    _ = await get_user(voter_data.student_id, session)
+
     voter.candidate = await get_candidate_by_id(voter_data.candidate_id,
                                                 session)
     voter.election = await get_election_by_id(voter_data.election_id, session)
@@ -55,7 +56,7 @@ async def delete_voter(
     if voter is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Voter not found"
+            detail=f"Voter having student id of {voter_id} not found"
         )
 
     await session.delete(voter)

@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING, Optional
 from sqlmodel import Field, Relationship, SQLModel
-from sqlalchemy import Column, String, Enum as SQLEnum, Boolean, UUID
+from sqlalchemy import Column, String, Enum as SQLEnum, Boolean
+from pydantic import ConfigDict
 from enum import Enum
-import uuid
 
 if TYPE_CHECKING:
     from .candidate import Candidate
@@ -17,12 +17,12 @@ class UserRole(str, Enum):
 
 
 class UserBase(SQLModel):
-    id: uuid.UUID = Field(
-        default_factory=uuid.uuid4,
-        sa_column=Column(UUID(as_uuid=True), primary_key=True)
-        )
     student_id: str = Field(
-        sa_column=Column(String, unique=True, index=True, nullable=False)
+        sa_column=Column(String,
+                         primary_key=True,
+                         unique=True,
+                         index=True,
+                         nullable=False)
     )
 
     matric_number: str = Field(
@@ -40,19 +40,23 @@ class UserBase(SQLModel):
     )
     is_active: bool = Field(
         default=True,
+        exclude=True,
         sa_column=Column(Boolean, nullable=False)
     )
 
 
 class User(UserBase, table=True):
-    __tablename__: str = "users"
+    # __tablename__: str = "users"
 
     candidacy: Optional["Candidate"] = Relationship(
         back_populates="user",
-        sa_relationship_kwargs={"uselist": False}
+        sa_relationship_kwargs={"uselist": False,
+                                "foreign_keys": "Candidate.student_id"}
     )
-    votes: list["Vote"] = Relationship(back_populates="voter")
     elections: list["Election"] = Relationship(back_populates="creator")
+    # votes: list["Vote"] = Relationship(back_populates="voter",
+    #                                    sa_relationship_kwargs={
+    #                                     "foreign_keys": "Vote.student_id"})
 
 
 class UserCreate(UserBase):
@@ -63,7 +67,7 @@ class UserCreate(UserBase):
     #         "example": {
     #             "matric_number": "2020/1/12345",
     #             "student_id": "M2312345",
-    #             "password": "strongpassword123"
+    #             "password": "strong_password123"
     #         }
     #     }
     # )

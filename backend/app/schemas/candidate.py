@@ -24,7 +24,7 @@ class CandidateCreateSchema(BaseModel):
         from_attributes=True,
         json_schema_extra={
             "example": {
-                "user_id": "123e4567-e89b-12d3-a456-426614174000",
+                "student_id": "M2345678",
                 "election_id": "123e4567-e89b-12d3-a456-426614174001",
                 "position": "SUG President",
                 "bio": "A dedicated student leader with 3 years of experience",
@@ -52,7 +52,7 @@ class CandidateUpdateSchema(BaseModel):
         json_schema_extra={
             "example": {
                 "position": "Public Relations Officer",
-                "bio": "Updated bio with more details",
+                "bio": "More detailed bio",
                 "manifesto": "Updated manifesto",
                 "achievements": ["Some New achievements"],
                 "photo_url": """
@@ -63,7 +63,16 @@ class CandidateUpdateSchema(BaseModel):
         })
 
 
-class CandidateRead(CandidateCreateSchema):
+class CandidateRead(BaseModel):
+    student_id: str
+    election_id: UUID
+    position: str
+    bio: str
+    manifesto: str
+    achievements: list[str]
+    photo_url: str
+    is_contesting: bool
+    candidate_id: UUID
     created_at: datetime
     updated_at: datetime
 

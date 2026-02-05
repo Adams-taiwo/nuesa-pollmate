@@ -1,6 +1,11 @@
 .env
 
+updates.py
+info.txt
+
 docs/sitemap/routes_with_payload.md
 docs/epics/workflow.md
 docs/sitemap/structure.md
 docs/migration_issue_note.md
+alembicc.txt
+successes.txt

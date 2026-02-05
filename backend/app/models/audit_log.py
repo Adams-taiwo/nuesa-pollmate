@@ -4,25 +4,25 @@ from sqlalchemy import Column, DateTime, func, String, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 import uuid
 from datetime import datetime, timezone
-from typing import Optional, Union
 
 # if TYPE_CHECKING:
 #     from .user import User
 
 
 class AuditLogBase(SQLModel):
-    actor_id: Optional[uuid.UUID] = Field(
-        default=None,
+    actor_id: str = Field(
+        default="",
         sa_column=Column(
-            UUID(as_uuid=True),
-            ForeignKey("users.id"),
+            String,
+            ForeignKey("users.student_id"),
             nullable=True
         )
     )
-    action: str = Field(sa_column=Column(String, nullable=False))
+    action: str = Field(max_length=500, sa_column=Column(String, nullable=False))
     target_type: str = Field(sa_column=Column(String, nullable=False))
-    target_id: uuid.UUID = Field(
-        sa_column=Column(UUID(as_uuid=True), nullable=False)
+    target_id: str = Field(
+        sa_column=Column(String,
+                         nullable=False)
     )
     metadata_: dict = Field(
         default_factory=dict,

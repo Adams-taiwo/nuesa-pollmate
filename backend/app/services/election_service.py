@@ -18,7 +18,7 @@ async def get_election_by_id(
     if election is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Election not found"
+            detail=f"Election having id of {election_id} not found"
         )
 
     return election
@@ -64,6 +64,7 @@ async def delete_election(
         session: AsyncSession = Depends(get_async_session)
 ):
     election = await get_election_by_id(election_id, session)
+    election_title = election.title if election else "Election not found"
 
     if not election:
         raise HTTPException(
@@ -74,7 +75,8 @@ async def delete_election(
     await session.delete(election)
     await session.commit()
 
-    return {"message": "Election deleted successfully"}
+    return {"message": "Election deleted successfully",
+            "election_title": str(election_title)}
 
 
 async def toggle_election_status(

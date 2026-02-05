@@ -61,38 +61,18 @@ class Candidate(CandidateBase, table=True):
     )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(
-            DateTime(timezone=True),
-            server_default=func.now(),
-            nullable=False
-        )
+        sa_column=Column(DateTime(timezone=True), server_default=func.now(),
+                         nullable=False)
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(
-            DateTime(timezone=True),
-            server_default=func.now(),
-            onupdate=func.now(),
-            nullable=False
-        )
+        sa_column=Column(DateTime(timezone=True), server_default=func.now(),
+                         onupdate=func.now(), nullable=False)
     )
-    user: "User" = Relationship(
-        back_populates="candidacy",
-        sa_relationship_kwargs={"uselist": False}
-    )
+
+    user: "User" = Relationship(back_populates="candidacy")
     election: "Election" = Relationship(back_populates="candidates")
     votes: list["Vote"] = Relationship(back_populates="candidate")
-
-
-# class CandidateCreate(Candidate):
-#     pass
-
-
-class CandidateRead(CandidateBase):
-    candidate_id: uuid.UUID
-    created_at: datetime
-    updated_at: datetime
-    election_id: uuid.UUID
 
 
 class CandidateUpdate(SQLModel):

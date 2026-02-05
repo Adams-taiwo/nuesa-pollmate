@@ -17,10 +17,10 @@ from datetime import datetime, timezone
 from enum import Enum
 from pydantic import field_validator
 
-if TYPE_CHECKING:
-    from .student import User
-    from .candidate import Candidate
-    from .vote import Vote
+# if TYPE_CHECKING:
+from .student import User
+from .candidate import Candidate
+from .vote import Vote
 
 
 # Election status enum
@@ -86,13 +86,9 @@ class Election(ElectionBase, table=True):
         )
     )
 
-    # Relationships
     creator: "User" = Relationship(back_populates="elections")
     candidates: list["Candidate"] = Relationship(back_populates="election")
     votes: list["Vote"] = Relationship(back_populates="election")
-
-
-class ElectionCreate(ElectionBase):
 
     @field_validator('end_time')
     @classmethod
@@ -110,14 +106,6 @@ class ElectionCreate(ElectionBase):
                 'max_choices_per_voter must be a positive integer'
             )
         return v
-
-
-class ElectionRead(ElectionBase):
-    id: uuid.UUID
-    created_at: datetime
-    updated_at: datetime
-    candidate_count: Optional[int] = None
-    vote_count: Optional[int] = None
 
 
 class ElectionUpdate(SQLModel):

@@ -2,6 +2,7 @@ from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
 from ..models.election import ElectionStatus
+from uuid import UUID
 
 
 class ElectionCreateSchema(BaseModel):
@@ -10,15 +11,21 @@ class ElectionCreateSchema(BaseModel):
     start_time: datetime
     end_time: datetime
     created_by: str
-    status: ElectionStatus = ElectionStatus.scheduled
+    status: ElectionStatus
     is_published: bool = False
     allow_multiple_choices: bool = False
     max_choices_per_voter: Optional[int] = 1
 
 
 class ElectionCreateResponse(BaseModel):
-    message: str
-    election_id: str
+    # message: str
+    id: UUID
+    title: str
+    description: str
+
+    model_config = ConfigDict(
+        from_attributes=True,
+    )
 
 
 class ElectionUpdateSchema(BaseModel):
@@ -39,6 +46,7 @@ class AuditLogReadSchema(BaseModel):
     metadata_: dict
     created_at: datetime
     updated_at: datetime
+
     model_config = ConfigDict(
         from_attributes=True,
     )
