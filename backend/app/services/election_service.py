@@ -1,9 +1,10 @@
 from fastapi import HTTPException, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from sqlmodel import select
 import uuid
 from ..models.election import Election
-from ..schemas.admin import ElectionCreateSchema, ElectionUpdateSchema
+from ..schemas.election import CreateElection, UpdateElection
 from ..db.session import get_async_session
 
 
@@ -11,7 +12,9 @@ async def get_election_by_id(
         election_id: uuid.UUID,
         session: AsyncSession = Depends(get_async_session)
 ) -> Election:
-    statement = select(Election).where(Election.id == election_id)
+    statement = select(Election).where(
+        Election.id == election_id
+        ).options(selectinload(Election.candidates), selectinload(Election.votes)) # type: ignore
     result = await session.execute(statement)
     election = result.scalar_one_or_none()
 
@@ -25,7 +28,7 @@ async def get_election_by_id(
 
 
 async def create_election(
-        election_data: ElectionCreateSchema,
+        election_data: CreateElection,
         session: AsyncSession = Depends(get_async_session)
 ) -> Election:
     election = Election(**election_data.model_dump())
@@ -38,7 +41,7 @@ async def create_election(
 
 async def update_election(
         election_id: uuid.UUID,
-        election_data: ElectionUpdateSchema,
+        election_data: UpdateElection,
         session: AsyncSession = Depends(get_async_session)
 ) -> Election:
     election = await get_election_by_id(election_id, session)
@@ -79,6 +82,7 @@ async def delete_election(
             "election_title": str(election_title)}
 
 
+# The logic in this function is outdated and no longer valid
 async def toggle_election_status(
         election_id: uuid.UUID,
         session: AsyncSession = Depends(get_async_session)
@@ -93,7 +97,6 @@ async def toggle_election_status(
             detail=f"Election having id {election_id} not found"
         )
 
-    election.is_published = not election.is_published
     await session.commit()
     await session.refresh(election)
 

@@ -8,23 +8,7 @@ from ..models.student import User
 from ..schemas.vote import VoteCreateSchema
 from .candidate_service import get_candidate_by_id
 from .election_service import get_election_by_id
-
-
-async def get_user(
-        student_id: str,
-        session: AsyncSession = Depends(get_async_session)
-):
-    statement = select(User).where(User.student_id == student_id)
-    result = await session.execute(statement)
-    user = result.scalar_one_or_none()
-
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Student having that id not found"
-        )
-
-    return user
+from .student_service import get_user
 
 
 async def create_voter(
@@ -51,14 +35,14 @@ async def delete_voter(
 ):
     statement = select(Vote).where(Vote.student_id == voter_id)
     result = await session.execute(statement)
-    voter = result.scalar_one_or_none()
+    voter_to_delete = result.scalar_one_or_none()
 
-    if voter is None:
+    if voter_to_delete is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Voter having student id of {voter_id} not found"
         )
 
-    await session.delete(voter)
+    await session.delete(voter_to_delete)
     await session.commit()
-    return voter
+    return {"message": f"Voter having voter id of {voter_id} deleted"}

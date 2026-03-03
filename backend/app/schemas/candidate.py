@@ -13,12 +13,11 @@ class CandidatePhotoUpload(BaseModel):
 class CandidateCreateSchema(BaseModel):
     student_id: str
     election_id: UUID
-    position: str
+    position: str  # seems pointless
     bio: Optional[str] = None
     manifesto: Optional[str] = None
     achievements: Optional[list[str]] = Field(default_factory=list)
     photo_url: Optional[str] = None
-    is_contesting: bool = True
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -39,7 +38,7 @@ class CandidateCreateSchema(BaseModel):
 
 
 class CandidateUpdateSchema(BaseModel):
-    position: Optional[str] = None
+    position: Optional[str] = None  # seems pointless
     bio: Optional[str] = None
     manifesto: Optional[str] = None
     achievements: Optional[list[str]] = None
@@ -66,7 +65,7 @@ class CandidateUpdateSchema(BaseModel):
 class CandidateRead(BaseModel):
     student_id: str
     election_id: UUID
-    position: str
+    position: str  # seems pointless
     bio: str
     manifesto: str
     achievements: list[str]
@@ -76,9 +75,10 @@ class CandidateRead(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        use_enum_values=True,
+        json_schema_extra={
             "example": {
                 "id": "123e4567-e89b-12d3-a456-426614174000",
                 "user_id": "123e4567-e89b-12d3-a456-426614174001",
@@ -98,3 +98,4 @@ class CandidateRead(BaseModel):
                 "updated_at": "2025-08-16T12:00:00Z"
             }
         }
+    )

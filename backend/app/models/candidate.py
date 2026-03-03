@@ -9,6 +9,7 @@ from sqlalchemy.types import JSON
 import uuid
 from datetime import datetime, timezone
 
+
 if TYPE_CHECKING:
     from .student import User
     from .election import Election
@@ -17,30 +18,25 @@ if TYPE_CHECKING:
 
 class CandidateBase(SQLModel):
     student_id: str = Field(
-        sa_column=Column(
-            String,
-            ForeignKey("users.student_id"),
-            nullable=False
-        ),
+        foreign_key="users.student_id",
+        nullable=False,
+        unique=True,
         min_length=6,
         max_length=8,
     )
     election_id: uuid.UUID = Field(
-        sa_column=Column(
-            PG_UUID(as_uuid=True),
-            ForeignKey("elections.id"),
-            nullable=False
-        )
+        foreign_key="elections.id",
+        nullable=False,
     )
     is_contesting: bool = Field(
         default=True,
         sa_column=Column(Boolean, nullable=False, server_default='true')
     )
-    position: str = Field(sa_column=Column(String, nullable=False))
+    
     bio: Optional[str] = Field(default=None, sa_column=Column(Text))
     manifesto: Optional[str] = Field(default=None, sa_column=Column(Text))
     achievements: List[str] = Field(
-        default_factory=list,
+        default_factory=List[str],
         sa_column=Column(JSONB,
                          nullable=False,
                          server_default=text("'[]'::jsonb"))
@@ -70,16 +66,6 @@ class Candidate(CandidateBase, table=True):
                          onupdate=func.now(), nullable=False)
     )
 
-    user: "User" = Relationship(back_populates="candidacy")
-    election: "Election" = Relationship(back_populates="candidates")
-    votes: list["Vote"] = Relationship(back_populates="candidate")
-
-
-class CandidateUpdate(SQLModel):
-    position: Optional[str] = None
-    is_contesting: Optional[bool] = None
-    bio: Optional[str] = None
-    manifesto: Optional[str] = None
-    achievements: Optional[List[str]] = Field(default=None,
-                                              sa_column=Column(JSON))
-    photo_url: Optional[str] = None
+    user: Optional["User"] = Relationship(back_populates="candidacy")
+    election: Optional["Election"] = Relationship(back_populates="candidates")
+    votes: list["Vote"] = Relationship(back_populates="candidate", )

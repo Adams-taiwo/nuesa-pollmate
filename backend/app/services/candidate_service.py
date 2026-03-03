@@ -1,4 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 from fastapi import (
     Depends, HTTPException, status, UploadFile)
 import uuid
@@ -19,7 +20,7 @@ UPLOAD_DIR = "uploads/candidate_photos"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
-async def save_upload_file(file: UploadFile, filename: str) -> str:
+async def save_upload_file( file: UploadFile, filename: str) -> str:
     """Save an uploaded file and return its URL."""
     file_location = os.path.join(UPLOAD_DIR, filename)
     async with aiofiles.open(file_location, 'wb') as out_file:
@@ -28,11 +29,14 @@ async def save_upload_file(file: UploadFile, filename: str) -> str:
     return f"/uploads/candidate_photos/{filename}"
 
 
-async def get_candidate_by_id(
+async def get_candidate_by_id(   
         candidate_id: uuid.UUID,
         session: AsyncSession = Depends(get_async_session)
 ):
-    statement = select(Candidate).where(Candidate.candidate_id == candidate_id)
+    statement = select(Candidate).where(
+        Candidate.candidate_id == candidate_id).options(
+            joinedload(Candidate.election) # type: ignore
+        )
     result = await session.execute(statement)
     candidate = result.scalar_one_or_none()
 
@@ -51,26 +55,26 @@ async def create_candidate(
 ):
     statement = select(User).where(
         User.student_id == candidate_data.student_id
-    )
+    ).options(joinedload(Candidate.election)) # type: ignore
     result = await session.execute(statement)
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"""User with student_id {candidate_data.student_id}
-              not found"""
+            detail=f"""Student with student_id {candidate_data.student_id}
+            not found"""
         )
 
     statement = select(Candidate).where(
         Candidate.student_id == candidate_data.student_id
-    )
+    ).options(joinedload(Candidate.election)) # type: ignore
     result = await session.execute(statement)
     existing_candidate = result.scalar_one_or_none()
     if existing_candidate:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"""User with student_id {candidate_data.student_id}
-              is already a candidate"""
+            detail=f"""Student with student_id {candidate_data.student_id}
+            is already a candidate"""
         )
 
     statement = select(Election).where(
@@ -82,7 +86,7 @@ async def create_candidate(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"""Election with id {candidate_data.election_id}
-              not found"""
+            not found"""
         )
 
     candidate = Candidate(**candidate_data.model_dump())

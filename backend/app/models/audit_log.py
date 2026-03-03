@@ -48,10 +48,6 @@ class AuditLog(AuditLogBase, table=True):
     )
 
 
-class AuditLogCreate(AuditLogBase):
-    pass
-
-
 class AuditLogRead(AuditLogBase):
     id: uuid.UUID
     created_at: datetime

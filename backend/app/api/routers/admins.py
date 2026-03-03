@@ -2,47 +2,59 @@ from fastapi import APIRouter, Depends, status, HTTPException
 from uuid import UUID
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import select, desc
 
 from ...schemas import (admin as admin_schemas,
                         candidate as candidate_schemas,
+                        election as election_schemas,
                         student as student_schemas,
                         vote as vote_schemas)
 from ...db.session import get_async_session
+from ...core.dependencies import AccessTokenBearer
 from ...models.audit_log import AuditLog
 from ...models.candidate import Candidate
 from ...models.election import Election
-from ...models.student import UserRead, User, UserRole
+from ...models.student import User, UserRole
 from ...services import (admin_service,
                          audit_log_service,
                          election_service,
                          candidate_service,
                          voter_service)
+from ...schemas.student import UserRead
 
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
+access_bearer = Depends(AccessTokenBearer())
 
-@router.post("/create",
+
+@router.post("/create/admin",
              response_model=UserRead,
-             status_code=status.HTTP_201_CREATED)
+             status_code=status.HTTP_201_CREATED,
+             dependencies=[access_bearer])
 async def create_admin(
     payload: student_schemas.AdminCreateSchema,
     session: AsyncSession = Depends(get_async_session),
 ):
     new_admin = await admin_service.create_admin_user(payload, session)
 
-    _ = audit_log_service.create_audit_log(
+    _ = await audit_log_service.create_audit_log(
         actor_id=new_admin.student_id,
         action="Admin Created",
         target_type="user",
         target_id=new_admin.student_id,
         session=session)
 
-    return UserRead.model_validate(new_admin)
+    return {
+        "student_id": new_admin.student_id,
+        "matric_number": new_admin.matric_number,
+        "role": new_admin.role.value,
+        "is_active": new_admin.is_active
+    }
 
 
-@router.get("/admins")
+@router.get("/admins",
+            dependencies=[access_bearer])
 async def get_admins(
     session: AsyncSession = Depends(get_async_session),
     admin=Depends(admin_service.get_admin_user)
@@ -50,7 +62,15 @@ async def get_admins(
     statement = select(User).where(User.role == UserRole.admin,)
     results = await session.execute(statement)
     admins = results.scalars().all()
-    return [UserRead.model_validate(admin) for admin in admins]
+    return [
+        {
+            "student_id": admin.student_id,
+            "matric_number": admin.matric_number,
+            "role": admin.role.value,
+            "is_active": admin.is_active
+        }
+        for admin in admins
+    ]
 
 
 @router.get("/all_elections",
@@ -59,9 +79,11 @@ async def get_all_elections(
     session: AsyncSession = Depends(get_async_session),
     admin=Depends(admin_service.get_admin_user),
 ):
+    elections = []
     if admin.role == UserRole.admin:
-        statement = select(Election).where(
-            Election.title != "")
+        statement = select(Election).order_by(
+            desc(Election.created_at)
+        )
         results = await session.execute(statement)
         elections = results.scalars().all()
 
@@ -71,12 +93,12 @@ async def get_all_elections(
 
 
 @router.post("/elections",
-             response_model=admin_schemas.ElectionCreateResponse,
+             response_model=election_schemas.ElectionRead,
              status_code=status.HTTP_201_CREATED)
 async def create_election(
-    payload: admin_schemas.ElectionCreateSchema,
+    payload: election_schemas.CreateElection,
     session: AsyncSession = Depends(get_async_session),
-    admin=Depends(admin_service.get_admin_user),
+    _=Depends(admin_service.get_admin_user),
 ):
     election = await election_service.create_election(payload, session)
 
@@ -148,15 +170,13 @@ async def get_audit_logs(
     limit: int = 10,
     offset: int = 0,
     session: AsyncSession = Depends(get_async_session),
-    admin=Depends(admin_service.get_admin_user),
+    _=Depends(admin_service.get_admin_user),
 ):
     created_col = AuditLog.__table__.c.created_at
     statement = select(AuditLog).order_by(created_col.desc()).limit(limit).offset(offset)
     result = await session.execute(statement)
     logs = result.scalars().all()
-    return [
-        admin_schemas.AuditLogReadSchema.model_validate(log) for log in logs
-        ]
+    return admin_schemas.AuditLogAdapter.validate_python(logs)
 
 
 @router.get("/candidates",
@@ -165,6 +185,7 @@ async def get_all_candidates(
     session: AsyncSession = Depends(get_async_session),
     admin=Depends(admin_service.get_admin_user)
 ):
+    candidates = []
     if admin.role == UserRole.admin:
         statement = select(Candidate).where(
             Candidate.created_at is not None
@@ -282,7 +303,7 @@ async def toggle_election_publishing(
         election_id, session
     )
 
-    _ = audit_log_service.create_audit_log(
+    _ = await audit_log_service.create_audit_log(
         actor_id=admin if hasattr(admin, "id") else "",
         action="Election State Toggled",
         target_type="election",

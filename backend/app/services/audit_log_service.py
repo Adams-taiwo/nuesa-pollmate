@@ -1,4 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 from fastapi import Depends, HTTPException, status
 from ..models.audit_log import AuditLog
 from ..db.session import get_async_session
@@ -36,3 +37,12 @@ async def create_audit_log(
         )
 
     return audit_log
+
+
+async def get_all_logs(session: AsyncSession):
+
+    statement = select(AuditLog).where(AuditLog.target_id != "")
+    results = await session.execute(statement)
+    all_logs = results.scalars().all()
+
+    return all_logs

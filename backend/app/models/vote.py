@@ -9,24 +9,22 @@ from pydantic import field_validator
 if TYPE_CHECKING:
     from .candidate import Candidate
     from .election import Election
+    from .student import User
 
 
 class VoteBase(SQLModel):
     student_id: str = Field(
         default="",
-        sa_column=Column(String,
-                         nullable=False)
+        foreign_key="users.student_id"
     )
     election_id: uuid.UUID = Field(
-        sa_column=Column(PG_UUID(as_uuid=True),
-                         ForeignKey("elections.id"),
-                         nullable=False)
+        foreign_key="elections.id",
+        nullable=False
     )
     candidate_id: uuid.UUID = Field(
         default=None,
-        sa_column=Column(PG_UUID(as_uuid=True),
-                         ForeignKey("candidates.candidate_id"),
-                         nullable=True)
+        foreign_key="candidates.candidate_id",
+        nullable=True
     )
     metadata_: Dict = Field(
         default_factory=dict,
@@ -65,5 +63,6 @@ class Vote(VoteBase, table=True):
                          onupdate=func.now(), nullable=False),
     )
 
+    student: "User" = Relationship(back_populates="vote")
     candidate: "Candidate" = Relationship(back_populates="votes")
     election: "Election" = Relationship(back_populates="votes")

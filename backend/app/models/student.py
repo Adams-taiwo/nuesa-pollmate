@@ -32,7 +32,7 @@ class UserBase(SQLModel):
                          index=True,
                          nullable=False),
         # regex=r'^\d{4}/1/90\d{3}[A-Z]{2}$',
-        description="Student matriculation number in format YYYY/1/NNNNN"
+        description="Student matriculation number in format YYYY/N/NNNNNAA"
     )
     role: UserRole = Field(
         default=UserRole.student,
@@ -46,50 +46,22 @@ class UserBase(SQLModel):
 
 
 class User(UserBase, table=True):
-    # __tablename__: str = "users"
+    __tablename__: str = "users"
 
     candidacy: Optional["Candidate"] = Relationship(
         back_populates="user",
-        sa_relationship_kwargs={"uselist": False,
-                                "foreign_keys": "Candidate.student_id"}
+        # sa_relationship_kwargs={"uselist": False,
+        #                         "foreign_keys": "Candidate.student_id"}
     )
     elections: list["Election"] = Relationship(back_populates="creator")
-    # votes: list["Vote"] = Relationship(back_populates="voter",
-    #                                    sa_relationship_kwargs={
-    #                                     "foreign_keys": "Vote.student_id"})
+    vote: Optional["Vote"] = Relationship(back_populates="student")
+    # votes: list["Vote"] = Relationship(back_populates="voter",)
+                                    #    sa_relationship_kwargs={
+                                    #     "foreign_keys": "Vote.student_id"})
 
 
 class UserCreate(UserBase):
     pass
-
-    # model_config = ConfigDict(
-    #     json_schema_extra={
-    #         "example": {
-    #             "matric_number": "2020/1/12345",
-    #             "student_id": "M2312345",
-    #             "password": "strong_password123"
-    #         }
-    #     }
-    # )
-
-
-class UserRead(SQLModel):
-    student_id: str
-    matric_number: str
-    role: UserRole
-    is_active: bool
-
-    # model_config = ConfigDict(
-    #     "json_schema_extra": {
-    #         "example": {
-    #             "id": "123e4567-e89b-12d3-a456-426614174000",
-    #             "student_id": "M2312345",
-    #             "matric_number": "2020/1/12345",
-    #             "role": "student",
-    #             "is_active": True,
-    #         }
-    #     }
-    # )
 
 
 class UserUpdate(SQLModel):
@@ -107,12 +79,3 @@ class UserLogin(SQLModel):
         nullable=False,
         # regex=r'^\d{4}/1/90\d{3}[A-Z]{2}$',
     )
-
-    # model_config = ConfigDict(
-    #     "json_schema_extra": {
-    #         "example": {
-    #             "student_id": "M2312345",
-    #             "matric_number": "2020/1/12345",
-    #         }
-    #     }
-    # )

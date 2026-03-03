@@ -26,6 +26,13 @@ AsyncSessionLocal = async_sessionmaker(
 
 async def init_db():
     async with engine.begin() as conn:
+        from ..models.audit_log import AuditLog
+        from ..models.candidate import Candidate
+        from ..models.election import Election
+        from ..models.student import User
+        from ..models.vote import Vote
+
+
         await conn.run_sync(SQLModel.metadata.create_all)
 
 

@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta, timezone
-import jwt
 from fastapi import HTTPException, status
+import jwt
+from logging import Logger
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from .config import Config
 import uuid
@@ -9,6 +10,8 @@ import uuid
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRY_MINUTES = 300
 
+
+logger = Logger("logger")
 
 def create_access_token(user_data: dict,
                         expiry: Optional[timedelta] = None) -> str:
@@ -22,6 +25,7 @@ def create_access_token(user_data: dict,
             minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
 
     payload['jti'] = str(uuid.uuid4())
+    payload['refresh'] = False
 
     token = jwt.encode(
         payload=payload,
@@ -52,7 +56,7 @@ def create_refresh_token(user_data: dict,
     return token
 
 
-def decode_token(token: str) -> dict:
+def decode_token(token: str) -> dict | None:
     try:
         token_data = jwt.decode(
             jwt=token,
@@ -62,7 +66,6 @@ def decode_token(token: str) -> dict:
         return token_data
 
     except jwt.PyJWTError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-        )
+        logger.exception(e)
+
+        return None
